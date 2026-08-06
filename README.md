@@ -63,7 +63,27 @@ ESP32_Audio_Classifier/
 
 ## Wiring
 
-Connect one LED (with a current-limiting resistor) to each GPIO.
+This project is written for an ESP32-S3. Connect one LED (with a 220 Ω to 330 Ω current-limiting resistor) to each GPIO listed below. For every LED, connect:
+
+- LED anode (+) → the selected GPIO
+- LED cathode (−) → GND
+- Resistor in series with the LED
+
+A simple layout is shown below:
+
+```text
+ESP32-S3
++----------------------------------------------+
+|                                              |
+|  GPIO 2  ──> Alarm LED ──┐                   |
+|  GPIO 15 ──> Ambulance LED ──┤               |
+|  GPIO 16 ──> Baby Crying LED ──┤             |
+|  GPIO 17 ──> Background LED ──┤              |
+|  GPIO 21 ──> Door Knocking LED ──┤           |
+|  GND ──────────────────────────┴─────────────┘ |
+|                                              |
++----------------------------------------------+
+```
 
 | Class | GPIO |
 |------|------|
@@ -74,6 +94,10 @@ Connect one LED (with a current-limiting resistor) to each GPIO.
 | Door knocking | GPIO 21 |
 
 Outputs are **active HIGH**.
+
+### Can it run on other ESP32 boards?
+
+The TensorFlow Lite model itself is not limited to the ESP32-S3, but this project was designed and documented for the ESP32-S3. In practice, other ESP32 variants can often run it if they have enough RAM/PSRAM, enough flash, and a compatible Arduino/ESP32 board package. The main catch is that the default GPIO mapping in this repository is for the S3 wiring shown above, so you may need to change the pin numbers in the sketch for a different board.
 
 ---
 
