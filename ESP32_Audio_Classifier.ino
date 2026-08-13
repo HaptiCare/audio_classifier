@@ -2,9 +2,15 @@
 #include <Arduino.h>
 #include "audio_classifier.h"
 #include "led_indicator.h"
+#include "microphone_input.h"
 
 static AudioClassifier classifier;
 static LEDIndicator leds;
+static MicrophoneInput mic;
+static bool mic_live_mode = false;
+static unsigned long last_live_inference_ms = 0;
+static constexpr unsigned long kLiveInferenceIntervalMs = 200;
+static constexpr float kLiveReportThreshold = 45.0f;
 
 static constexpr uint8_t SYNC_BYTE_1 = 0xAA;
 static constexpr uint8_t SYNC_BYTE_2 = 0x55;
@@ -106,8 +112,17 @@ void setup() {
     return;
   }
 
+  Serial.printf("Model input tensor bytes: %d\n", classifier.getInputByteSize());
+
+  if (mic.begin()) {
+    mic_live_mode = true;
+    Serial.println("Live microphone mode: ON");
+  } else {
+    Serial.println("Live microphone mode: OFF (check mic wiring/pins)");
+  }
+
   Serial.println("TFLite Micro Engine & Hardware Modules Ready!");
-  Serial.println("Send '1'..'5' for test patterns, or stream framed audio.\n");
+  Serial.println("Send '1'..'5' for tests, 'M' to toggle live mic, or stream framed audio.\n");
 }
 
 void loop() {
@@ -148,7 +163,32 @@ void loop() {
         InferenceResult res = classifier.predict();
         printReport(res);
         leds.setWinner(res.best_class, res.max_confidence);
+      } else if (cmd == 'M' || cmd == 'm') {
+        if (!mic.isReady()) {
+          Serial.println("Mic is not initialized. Check I2S pins in microphone_input.cpp");
+        } else {
+          mic_live_mode = !mic_live_mode;
+          Serial.printf("Live microphone mode: %s\n", mic_live_mode ? "ON" : "OFF");
+        }
       }
+    }
+  }
+
+  if (mic_live_mode && millis() - last_live_inference_ms >= kLiveInferenceIntervalMs) {
+    last_live_inference_ms = millis();
+    int bytes = classifier.getInputByteSize();
+
+    if (!mic.captureToInt8(classifier.getInputBuffer(), bytes)) {
+      return;
+    }
+
+    InferenceResult res = classifier.predict();
+    leds.setWinner(res.best_class, res.max_confidence);
+
+    if (res.max_confidence >= kLiveReportThreshold) {
+      Serial.printf("[LIVE] %s (%.1f%%)\n",
+                    classifier.getClassName(res.best_class),
+                    res.max_confidence);
     }
   }
 }

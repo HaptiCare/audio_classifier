@@ -10,6 +10,7 @@ The sketch runs an INT8 TensorFlow Lite model locally on the ESP32-S3 and drives
 
 - Runs fully on-device using TensorFlow Lite Micro
 - Supports five audio classes
+- Optional live I2S microphone inference mode
 - Binary serial protocol for host applications
 - Simple ASCII commands for testing
 - LED output for visual predictions
@@ -56,6 +57,9 @@ ESP32_Audio_Classifier/
 ├── audio_classifier.h
 ├── led_indicator.cpp
 ├── led_indicator.h
+├── microphone_input.cpp
+├── microphone_input.h
+├── model_data.cpp
 └── model_data.h
 ```
 
@@ -95,9 +99,17 @@ ESP32-S3
 
 Outputs are **active HIGH**.
 
-### Can it run on other ESP32 boards?
+### I2S Microphone (for live sound detection)
 
-The TensorFlow Lite model itself is not limited to the ESP32-S3, but this project was designed and documented for the ESP32-S3. In practice, other ESP32 variants can often run it if they have enough RAM/PSRAM, enough flash, and a compatible Arduino/ESP32 board package. The main catch is that the default GPIO mapping in this repository is for the S3 wiring shown above, so you may need to change the pin numbers in the sketch for a different board.
+Default pin mapping in `microphone_input.cpp`:
+
+- `BCK/SCK` -> GPIO 41
+- `WS/LRCLK` -> GPIO 42
+- `SD/DOUT` -> GPIO 40
+- `VCC` -> 3.3V
+- `GND` -> GND
+
+If your board uses different pins, edit these constants in `microphone_input.cpp`.
 
 ---
 
@@ -110,6 +122,7 @@ The TensorFlow Lite model itself is not limited to the ESP32-S3, but this projec
 | Command | Action |
 |---------|--------|
 | `1`–`5` | Run a synthetic test for the selected class |
+| `M` or `m` | Toggle live microphone inference on/off |
 | `S` or `s` | Send an unframed spectrogram payload matching the model input size |
 
 ### Binary Request
@@ -157,3 +170,11 @@ Check your board selection, USB mode, and boot procedure.
 **Unexpected LED output**
 
 Verify the GPIO connections match the wiring table.
+
+**`Failed to resize buffer` / `AllocateTensors() failed!`**
+
+The model needs a larger TensorFlow Lite Micro tensor arena than the default small allocation.
+
+- Ensure **PSRAM is enabled** in board settings.
+- Use an ESP32-S3 variant with PSRAM when possible.
+- If needed, increase `kTensorArenaSize` in `audio_classifier.h`.

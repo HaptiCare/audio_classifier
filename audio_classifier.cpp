@@ -1,5 +1,11 @@
 #include "audio_classifier.h"
 #include "model_data.h"
+#include "esp_heap_caps.h"
+#include <TensorFlowLite_ESP32.h>
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/schema/schema_generated.h"
 
 static const char* kClassNames[5] = {
   "ALARM",
@@ -11,11 +17,47 @@ static const char* kClassNames[5] = {
 
 AudioClassifier::AudioClassifier()
   : error_reporter(nullptr), model(nullptr), interpreter(nullptr),
-    input(nullptr), output(nullptr) {}
+    input(nullptr), output(nullptr), tensor_arena(nullptr) {}
+
+AudioClassifier::~AudioClassifier() {
+  if (tensor_arena != nullptr) {
+    heap_caps_free(tensor_arena);
+    tensor_arena = nullptr;
+  }
+}
 
 bool AudioClassifier::begin() {
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
+
+  if (tensor_arena == nullptr) {
+    if (psramFound()) {
+      tensor_arena = static_cast<uint8_t*>(
+          heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+      if (tensor_arena != nullptr) {
+        Serial.printf("Tensor arena allocated in PSRAM: %u bytes\n",
+                      (unsigned)kTensorArenaSize);
+      }
+    }
+
+    if (tensor_arena == nullptr) {
+      tensor_arena = static_cast<uint8_t*>(
+          heap_caps_malloc(kTensorArenaSize, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+      if (tensor_arena != nullptr) {
+        Serial.printf("Tensor arena allocated in internal RAM: %u bytes\n",
+                      (unsigned)kTensorArenaSize);
+      }
+    }
+
+    if (tensor_arena == nullptr) {
+      TF_LITE_REPORT_ERROR(error_reporter,
+                           "Failed to allocate %u-byte tensor arena. Free heap=%u, free PSRAM=%u",
+                           (unsigned)kTensorArenaSize,
+                           (unsigned)ESP.getFreeHeap(),
+                           (unsigned)ESP.getFreePsram());
+      return false;
+    }
+  }
 
   model = tflite::GetModel(g_model);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
@@ -24,12 +66,13 @@ bool AudioClassifier::begin() {
   }
 
   static tflite::AllOpsResolver resolver;
-  static tflite::MicroInterpreter static_interpreter(
+  interpreter = new tflite::MicroInterpreter(
       model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
-  interpreter = &static_interpreter;
 
   if (interpreter->AllocateTensors() != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "AllocateTensors() failed!");
+    delete interpreter;
+    interpreter = nullptr;
     return false;
   }
 

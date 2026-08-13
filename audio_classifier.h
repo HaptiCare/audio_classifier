@@ -2,11 +2,13 @@
 #define AUDIO_CLASSIFIER_H_
 
 #include <Arduino.h>
-#include <TensorFlowLite_ESP32.h>
-#include "tensorflow/lite/micro/all_ops_resolver.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
-#include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/schema/schema_generated.h"
+
+namespace tflite {
+  class ErrorReporter;
+  class Model;
+  class MicroInterpreter;
+}
+struct TfLiteTensor;
 
 struct InferenceResult {
   int best_class;
@@ -18,6 +20,7 @@ struct InferenceResult {
 class AudioClassifier {
 public:
   AudioClassifier();
+  ~AudioClassifier();
   bool begin();
   int8_t* getInputBuffer();
   int getInputByteSize();
@@ -31,8 +34,8 @@ private:
   TfLiteTensor* input;
   TfLiteTensor* output;
 
-  static constexpr int kTensorArenaSize = 40 * 1024;
-  alignas(16) uint8_t tensor_arena[kTensorArenaSize];
+  static constexpr size_t kTensorArenaSize = 350 * 1024;
+  uint8_t* tensor_arena;
 };
 
 #endif // AUDIO_CLASSIFIER_H_
