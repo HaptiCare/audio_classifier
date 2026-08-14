@@ -19,11 +19,22 @@ The sketch runs an INT8 TensorFlow Lite model locally on the ESP32-S3 and drives
 
 ## Quick Start
 
+### Option A: VS Code + PlatformIO (Automatic Library Downloads)
+When using PlatformIO, all required libraries (including `TensorFlowLite_ESP32`) download automatically when you build:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/ESP32_Audio_Classifier.git
+   cd ESP32_Audio_Classifier
+   ```
+2. Open the directory in VS Code with the **PlatformIO** extension.
+3. Connect your ESP32-S3 and click **Build** or **Upload**. PlatformIO will auto-fetch all dependencies listed in `platformio.ini`.
+
+### Option B: Arduino IDE
 1. Install the ESP32 board package in Arduino IDE.
-2. Install the TensorFlowLite_ESP32 library.
-3. Open the `ESP32_Audio_Classifier` folder.
-4. Select your ESP32-S3 board and serial port.
-5. Build and upload.
+2. Install `TensorFlowLite_ESP32` via Library Manager (or `arduino-cli lib install TensorFlowLite_ESP32`).
+3. Open `ESP32_Audio_Classifier.ino`.
+4. Select your ESP32-S3 board, enable PSRAM, and upload.
 
 ### Recommended board settings
 
@@ -31,7 +42,7 @@ The sketch runs an INT8 TensorFlow Lite model locally on the ESP32-S3 and drives
 |---------|-------|
 | Board | Your ESP32-S3 module |
 | USB CDC on Boot | Enabled (if required) |
-| PSRAM | Enabled (if available) |
+| PSRAM | Enabled (OPI / QSPI PSRAM) |
 | Upload Speed | Fastest stable value |
 
 ---
