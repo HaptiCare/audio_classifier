@@ -13,7 +13,7 @@ public:
   void startupAnimation();
 
 private:
-  static constexpr int kLedPins[5] = {2, 15, 16, 17, 21};
+  static constexpr int kLedPins[4] = {6, 7, 15, 4}; // Yellow(0:Baby), Green(1:Bg), Purple(2:Knock), Red(3:Emergency)
   int current_latched_class;
   unsigned long last_event_time;
   static constexpr unsigned long kHoldTimeMs = 4000;

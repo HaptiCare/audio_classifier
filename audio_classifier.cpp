@@ -7,12 +7,11 @@
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-static const char* kClassNames[5] = {
-  "ALARM",
-  "AMBULANCE",
+static const char* kClassNames[4] = {
   "BABY CRYING",
   "BACKGROUND NOISE",
-  "DOOR KNOCKING"
+  "DOOR KNOCKING",
+  "EMERGENCY ALERT"
 };
 
 AudioClassifier::AudioClassifier()
@@ -90,13 +89,13 @@ int AudioClassifier::getInputByteSize() {
 }
 
 const char* AudioClassifier::getClassName(int index) {
-  if (index >= 0 && index < 5) return kClassNames[index];
+  if (index >= 0 && index < 4) return kClassNames[index];
   return "UNKNOWN";
 }
 
 InferenceResult AudioClassifier::predict() {
   InferenceResult res;
-  res.best_class = 0;
+  res.best_class = 1; // Default to background noise
   res.max_confidence = 0.0f;
   res.latency_ms = 0.0f;
 
@@ -114,7 +113,7 @@ InferenceResult AudioClassifier::predict() {
   int zero_point = output->params.zero_point;
   int8_t max_val = -128;
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     int8_t raw = output->data.int8[i];
     float prob = (raw - zero_point) * scale * 100.0f;
     if (prob < 0.0f) prob = 0.0f;

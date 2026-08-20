@@ -14,7 +14,7 @@ struct InferenceResult {
   int best_class;
   float max_confidence;
   float latency_ms;
-  float probabilities[5];
+  float probabilities[4];
 };
 
 class AudioClassifier {
@@ -34,7 +34,7 @@ private:
   TfLiteTensor* input;
   TfLiteTensor* output;
 
-  static constexpr size_t kTensorArenaSize = 350 * 1024;
+  static constexpr size_t kTensorArenaSize = 40 * 1024; // 40 KB internal SRAM
   uint8_t* tensor_arena;
 };
 

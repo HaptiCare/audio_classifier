@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include "audio_classifier.h"
 #include "led_indicator.h"
@@ -22,7 +21,7 @@ void printReport(const InferenceResult& res) {
   Serial.printf(" Inference Time: %.2f ms (ESP32-S3 LX7 @ 240MHz)\n", res.latency_ms);
   Serial.println("--------------------------------------------------");
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     float p = res.probabilities[i];
     int bar_len = (int)(p / 5.0f);
     if (bar_len > 20) bar_len = 20;
@@ -53,13 +52,13 @@ bool readExact(uint8_t* buf, int count, unsigned long timeout_ms) {
 }
 
 void sendBinaryResponse(const InferenceResult& res) {
-  uint8_t resp[31];
+  uint8_t resp[27]; // 27 bytes total for 4 output classes (2 sync + 1 winner + 4 latency + 4 max_conf + 16 probs)
   resp[0] = RESP_BYTE_1;
   resp[1] = RESP_BYTE_2;
   resp[2] = (uint8_t)res.best_class;
   memcpy(&resp[3], &res.max_confidence, sizeof(float));
   memcpy(&resp[7], &res.latency_ms, sizeof(float));
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     memcpy(&resp[11 + i * 4], &res.probabilities[i], sizeof(float));
   }
   Serial.write(resp, sizeof(resp));
@@ -104,7 +103,7 @@ void setup() {
   leds.startupAnimation();
 
   Serial.println("\n==================================================");
-  Serial.println("  MODULAR ESP32-S3 TFLITE MICRO ENGINE");
+  Serial.println("  MODULAR ESP32-S3 TFLITE MICRO ENGINE (4-CLASS)");
   Serial.println("==================================================\n");
 
   if (!classifier.begin()) {
@@ -122,7 +121,7 @@ void setup() {
   }
 
   Serial.println("TFLite Micro Engine & Hardware Modules Ready!");
-  Serial.println("Send '1'..'5' for tests, 'M' to toggle live mic, or stream framed audio.\n");
+  Serial.println("Send '1'..'4' for tests, 'M' to toggle live mic, or stream framed audio.\n");
 }
 
 void loop() {
@@ -137,7 +136,7 @@ void loop() {
     } else {
       char cmd = (char)Serial.read();
 
-      if (cmd >= '1' && cmd <= '5') {
+      if (cmd >= '1' && cmd <= '4') {
         int target_class = cmd - '1';
         Serial.printf("Triggering Test Pattern for %s...\n",
                       classifier.getClassName(target_class));
@@ -147,7 +146,7 @@ void loop() {
 
         for (int i = 0; i < bytes; i++) {
           int8_t val = (int8_t)(-100 + (rand() % 20));
-          if ((i % 5) == target_class) {
+          if ((i % 4) == target_class) {
             val = (int8_t)(20 + (rand() % 100));
           }
           in_buf[i] = val;
